@@ -1,0 +1,88 @@
+FROM oliverlundquist/php7:latest
+MAINTAINER Oliver Lundquist "mail@oliverlundquist.com"
+
+ENV SELENIUM_VERSION 3.0.1
+ENV CHROMEDRIVER_VERSION 2.26
+
+WORKDIR /root
+
+## ######################## ##
+## Setup and Install Java 8 ##
+## ######################## ##
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+		ca-certificates \
+		curl \
+		wget \
+		bzr \
+		git \
+		mercurial \
+		openssh-client \
+		subversion \
+		procps \
+		bzip2 \
+		unzip \
+		xz-utils \
+	&& rm -rf /var/lib/apt/lists/*
+
+RUN echo 'deb http://deb.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/jessie-backports.list
+
+ENV LANG C.UTF-8
+
+RUN { \
+		echo '#!/bin/sh'; \
+		echo 'set -e'; \
+		echo; \
+		echo 'dirname "$(dirname "$(readlink -f "$(which javac || which java)")")"'; \
+	} > /usr/local/bin/docker-java-home \
+	&& chmod +x /usr/local/bin/docker-java-home
+
+ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
+ENV JAVA_VERSION 8u111
+ENV JAVA_DEBIAN_VERSION 8u111-b14-2~bpo8+1
+ENV CA_CERTIFICATES_JAVA_VERSION 20140324
+
+RUN set -x \
+	&& apt-get update \
+	&& apt-get install -y \
+		openjdk-8-jdk="$JAVA_DEBIAN_VERSION" \
+		ca-certificates-java="$CA_CERTIFICATES_JAVA_VERSION" \
+	&& rm -rf /var/lib/apt/lists/* \
+	&& [ "$JAVA_HOME" = "$(docker-java-home)" ]
+
+RUN /var/lib/dpkg/info/ca-certificates-java.postinst configure
+
+## ################################### ##
+## Setup and Install Selenium and Xvfb ##
+## ################################### ##
+RUN apt-get update -y && apt-get install -y \
+		xvfb \
+		chromium
+
+RUN curl --show-error --location --remote-name \
+		"http://selenium-release.storage.googleapis.com/3.0/selenium-server-standalone-$SELENIUM_VERSION.jar"
+
+RUN curl --show-error --location --remote-name \
+		"https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip" \
+		&& unzip "chromedriver_linux64.zip" -d /usr/local/bin \
+		&& rm -f "chromedriver_linux64.zip"
+
+COPY docker/build/assets/xvfb-chromium /usr/bin/xvfb-chromium
+RUN chmod +x /usr/bin/xvfb-chromium
+RUN ln -s /usr/bin/xvfb-chromium /usr/bin/google-chrome
+RUN ln -s /usr/bin/xvfb-chromium /usr/bin/chromium-browser
+
+## ######################### ##
+## Setup runtime environment ##
+## ######################### ##
+RUN { \
+		echo '#!/bin/sh'; \
+		echo 'java -jar /root/selenium-server-standalone-$SELENIUM_VERSION.jar > /dev/null 2>&1 &'; \
+		echo 'sleep 1'; \
+		echo '$@'; \
+	} > /usr/bin/run-script.sh \
+	&& chmod +x /usr/bin/run-script.sh
+
+RUN mkdir -p /var/app/current
+WORKDIR /var/app/current
+
+ENTRYPOINT ["/usr/bin/run-script.sh"]

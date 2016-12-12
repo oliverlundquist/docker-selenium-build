@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# big shout-out to Mark Adams for providing this amazing script
+# https://raw.githubusercontent.com/mark-adams/docker-chromium-xvfb/1c47cfe7429531c1c6c4d567060687c2760ae3dd/images/base/xvfb-chromium
+_kill_procs() {
+  kill -TERM $chromium
+  wait $chromium
+  kill -TERM $xvfb
+}
+
+# Setup a trap to catch SIGTERM and relay it to child processes
+trap _kill_procs SIGTERM
+
+XVFB_WHD=${XVFB_WHD:-1280x720x16}
+
+# Start Xvfb
+Xvfb :99 -ac -screen 0 $XVFB_WHD -nolisten tcp &
+xvfb=$!
+
+export DISPLAY=:99
+
+chromium --no-sandbox $@ &
+chromium=$!
+
+wait $chromium
+wait $xvfb
