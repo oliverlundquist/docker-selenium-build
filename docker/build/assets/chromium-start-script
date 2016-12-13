@@ -1,0 +1,9 @@
+#!/bin/bash
+_kill_procs() {
+  kill -TERM $chromium
+  wait $chromium
+}
+trap _kill_procs SIGTERM
+
+chromium --no-sandbox $@ &
+wait $chromium

@@ -66,16 +66,19 @@ RUN curl --show-error --location --remote-name \
 		&& unzip "chromedriver_linux64.zip" -d /usr/local/bin \
 		&& rm -f "chromedriver_linux64.zip"
 
-COPY docker/build/assets/xvfb-chromium /usr/bin/xvfb-chromium
-RUN chmod +x /usr/bin/xvfb-chromium
-RUN ln -s /usr/bin/xvfb-chromium /usr/bin/google-chrome
-RUN ln -s /usr/bin/xvfb-chromium /usr/bin/chromium-browser
+COPY docker/build/assets/chromium-start-script /usr/bin/chromium-start-script
+RUN chmod +x /usr/bin/chromium-start-script
+RUN ln -s /usr/bin/chromium-start-script /usr/bin/google-chrome
+RUN ln -s /usr/bin/chromium-start-script /usr/bin/chromium-browser
 
 ## ######################### ##
 ## Setup runtime environment ##
 ## ######################### ##
 RUN { \
 		echo '#!/bin/sh'; \
+		echo 'Xvfb :99 -ac -screen 0 1280x720x16 -nolisten tcp &'; \
+		echo 'sleep 1'; \
+		echo 'export DISPLAY=:99'; \
 		echo 'java -jar /root/selenium-server-standalone-$SELENIUM_VERSION.jar > /dev/null 2>&1 &'; \
 		echo 'sleep 1'; \
 		echo '$@'; \

@@ -1,8 +1,0 @@
-version: '2'
-services:
-  selenium-test:
-    image: oliverlundquist/selenium-php:1.0.0
-    ports:
-      - "80:80"
-    volumes:
-      - ./laravel:/var/app/current/laravel
