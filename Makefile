@@ -2,7 +2,7 @@
 # Environment Variables
 ##
 NAMESPACE=oliverlundquist
-TAG=1.0.0
+TAG=1.0.2
 
 ##
 # ANSI Escape Codes
